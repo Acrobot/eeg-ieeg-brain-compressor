@@ -7,7 +7,7 @@ from torcheeg.model_selection import train_test_split
 
 from datasets import EEGBatch, EEGDataset
 
-_SAMPLING_RATE = 256
+_SAMPLING_RATE = 512
 
 
 class HciEegDataset(EEGDataset):
@@ -85,7 +85,7 @@ class MahnobHciWrapper(Dataset[EEGBatch]):
         sample_id = int(labels["clip_id"].split("_")[-1])
         patient = labels["subject_id"]
         return EEGBatch(
-            data=signal.T, id=index, sample_id=sample_id, patient=patient, dataset=0
+            data=signal, id=index, sample_id=sample_id, patient=patient, dataset=0
         )
 
     def __len__(self) -> int:

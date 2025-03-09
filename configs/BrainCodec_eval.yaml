@@ -5,11 +5,11 @@ trainer:
   devices: auto
   num_nodes: 1
   precision: 32
-#  logger:
-#    class_path: pytorch_lightning.loggers.WandbLogger
-#    init_args:
-#      project: "BrainCodec"
-#      name: "Initial run"
+  logger:
+    class_path: pytorch_lightning.loggers.WandbLogger
+    init_args:
+      project: "BrainCodec"
+      name: "Initial run"
   fast_dev_run: false
   max_epochs: -1
   min_epochs: null
@@ -102,11 +102,24 @@ model:
 data:
   class_path: datasets.hci.HciEegDataset
   init_args:
-    folder: "D:\\Programming\\hci-data\\Sessions_easy"
+    folder: "D:\\Programming\\hci-data\\Sessions"
     batch_size: 16
     segment_size: 4000
     stride: 1000
-    num_workers: 1
+    num_workers: 0
     train_size: 0.75
     validation_size: 0.15
     seed: 42
+
+#  class_path: datasets.bids.BIDSEEGData
+#  init_args:
+#    folders:
+#      - "D:\\Programming\\BIDS_CHB-MIT\\BIDS_CHB-MIT"
+#    train_patients:
+#      - ["01", "02"]
+#    test_patients:
+#      - ["03"]
+#    batch_size: 16
+#    segment_size: 4000
+#    stride: 1000
+#    num_workers: 0
