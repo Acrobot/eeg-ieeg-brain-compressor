@@ -5,7 +5,11 @@ trainer:
   devices: auto
   num_nodes: 1
   precision: 32
-  logger: false
+#  logger:
+#    class_path: pytorch_lightning.loggers.WandbLogger
+#    init_args:
+#      project: "BrainCodec"
+#      name: "Initial run"
   fast_dev_run: false
   max_epochs: -1
   min_epochs: null
@@ -47,7 +51,7 @@ model:
     accumulate_grad_batches: 1
     use_balancer: true
     train_discriminator: true
-    load_model: <checkpoint>
+#    load_model: <checkpoint>
     model:
       class_path: models.encodec.Encodec
       init_args:
@@ -96,15 +100,13 @@ model:
         commitment_weight: 1000
         threshold_ema_dead_code: 2
 data:
-  class_path: datasets.bids.BIDSEEGData
+  class_path: datasets.hci.HciEegDataset
   init_args:
-    folders: 
-      - <dataset_folder>
-    train_patients:
-      - [""]
-    test_patients:
-      - ["<pat>"]
+    folder: "D:\\Programming\\hci-data\\Sessions_easy"
     batch_size: 16
     segment_size: 4000
     stride: 1000
     num_workers: 1
+    train_size: 0.75
+    validation_size: 0.15
+    seed: 42
