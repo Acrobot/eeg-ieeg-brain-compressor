@@ -49,6 +49,7 @@ class BrainCodec(EEGCodec):
         self.train_discriminator = train_discriminator
 
         self.train_prd = MeanMetric()
+        self.val_prd = MeanMetric()
         self.test_prd = MeanMetric()
 
         self.accumulate_grad_batches = (
@@ -172,15 +173,71 @@ class BrainCodec(EEGCodec):
 
         loss = loss / self.trainer.accumulate_grad_batches
 
-    def test_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx):
         x = batch.data
 
-        audio_hat, _ = self._common_step(x)
+        audio_hat, commit_loss = self._common_step(x)
 
         x = rearrange(
             x,
             "batch channel length -> (batch channel) 1 length",
         )
+
+        logits_sample, fmaps_sample = self.discriminator(x)
+        logits_rec, fmaps_rec = self.discriminator(audio_hat)
+        gen_loss = generator_loss(audio_hat, x, fmaps_rec, fmaps_sample, logits_rec)
+        disc_loss = discriminator_loss(logits_sample, logits_rec)
+        self.log("val/discriminator/total", disc_loss, prog_bar=True)
+
+        commit_loss = commit_loss.mean()
+
+        loss = (
+            sum(v for v in gen_loss.values()) + commit_loss
+        ) / self.accumulate_grad_batches
+
+        self.log("val/generator/total_loss", loss, prog_bar=True)
+        self.log("val/generator/reconstruction_loss", gen_loss["reconstruction_loss"])
+        self.log("val/generator/line_loss", gen_loss["line_loss"])
+        self.log("val/generator/spectral_loss", gen_loss["spectral_loss"])
+        self.log("val/generator/feature_loss", gen_loss["feature_loss"])
+        self.log("val/generator/adversarial_loss", gen_loss["adversarial_loss"])
+        self.log("val/commit_loss", commit_loss)
+
+        batch_prd = self._compute_prd(x, audio_hat)
+        self.val_prd(batch_prd)
+        self.log("val/prd", self.val_prd)
+
+        return
+
+    def test_step(self, batch, batch_idx):
+        x = batch.data
+
+        audio_hat, commit_loss = self._common_step(x)
+
+        x = rearrange(
+            x,
+            "batch channel length -> (batch channel) 1 length",
+        )
+
+        logits_sample, fmaps_sample = self.discriminator(x)
+        logits_rec, fmaps_rec = self.discriminator(audio_hat)
+        gen_loss = generator_loss(audio_hat, x, fmaps_rec, fmaps_sample, logits_rec)
+        disc_loss = discriminator_loss(logits_sample, logits_rec)
+        self.log("test/discriminator/total", disc_loss, prog_bar=True)
+
+        commit_loss = commit_loss.mean()
+
+        loss = (
+            sum(v for v in gen_loss.values()) + commit_loss
+        ) / self.accumulate_grad_batches
+
+        self.log("test/generator/total_loss", loss, prog_bar=True)
+        self.log("test/generator/reconstruction_loss", gen_loss["reconstruction_loss"])
+        self.log("test/generator/line_loss", gen_loss["line_loss"])
+        self.log("test/generator/spectral_loss", gen_loss["spectral_loss"])
+        self.log("test/generator/feature_loss", gen_loss["feature_loss"])
+        self.log("test/generator/adversarial_loss", gen_loss["adversarial_loss"])
+        self.log("test/commit_loss", commit_loss)
 
         batch_prd = self._compute_prd(x, audio_hat)
         self.test_prd(batch_prd)

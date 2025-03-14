@@ -9,7 +9,7 @@ trainer:
     class_path: pytorch_lightning.loggers.WandbLogger
     init_args:
       project: "BrainCodec"
-      name: "Initial run"
+      name: "Initial run 2"
   callbacks:
     class_path: pytorch_lightning.callbacks.ModelCheckpoint
     init_args:
@@ -20,8 +20,7 @@ trainer:
       mode: min
       filename: "epoch={epoch}-step={step}-prd={train/prd:.2f}"
       auto_insert_metric_name: false
-  fast_dev_run: false
-  num_sanity_val_steps: 0
+  check_val_every_n_epoch: 1
   log_every_n_steps: 10
   enable_checkpointing: true
   enable_progress_bar: true
