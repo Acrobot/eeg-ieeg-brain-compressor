@@ -5,11 +5,11 @@ trainer:
   devices: auto
   num_nodes: 1
   precision: 32
-#  logger:
-#    class_path: pytorch_lightning.loggers.WandbLogger
-#    init_args:
-#      project: "BrainCodec"
-#      name: "Initial run"
+  logger:
+    class_path: pytorch_lightning.loggers.WandbLogger
+    init_args:
+      project: "BrainCodec"
+      name: "Initial run"
   callbacks:
     class_path: pytorch_lightning.callbacks.ModelCheckpoint
     init_args:
