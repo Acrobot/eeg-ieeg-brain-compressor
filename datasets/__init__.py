@@ -10,5 +10,5 @@ class EEGDataset(pl.LightningDataModule):
 
 EEGBatch = namedtuple(
     "EEGBatch",
-    ("data", "id", "sample_id", "patient", "dataset"),
+    ("data", "id", "sample_id", "patient", "dataset", "emotion"),
 )

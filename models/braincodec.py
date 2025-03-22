@@ -6,6 +6,7 @@ from einops import rearrange
 from torchmetrics import MeanMetric
 from transformers import get_cosine_schedule_with_warmup
 
+from datasets import EEGBatch
 from utils.balancer import Balancer
 from utils.loss import discriminator_loss, generator_loss
 
@@ -78,23 +79,29 @@ class BrainCodec(EEGCodec):
         self.automatic_optimization = False
 
         if load_model is not None:
-            weights = torch.load(load_model, weights_only=True)
+            weights = torch.load(load_model, weights_only=False)
             self.load_state_dict(weights, strict=False)
 
     def forward(self, audio_input):
-        output, _ = self._common_step(audio_input)
+        output, *_ = self._common_step(audio_input)
         return output
 
     def _common_step(self, audio_input):
+        batch_size = audio_input.size(0)
         audio_input = rearrange(
             audio_input,
             "batch channel length -> (batch channel) 1 length",
         )
         features = self.model.encode(audio_input)
-        quantized, _, commit_loss = self.quantizer(features[0])
+        quantized, codes, commit_loss = self.quantizer(features[0])
         output = self.model.decode(quantized)
+        codes = rearrange(
+            codes,
+            "(batch channel) dim codebooks -> batch channel dim codebooks",
+            batch=batch_size,
+        )
 
-        return output, commit_loss
+        return output, commit_loss, features, quantized, codes
 
     def training_step(self, batch, batch_idx):
         x = batch.data
@@ -102,7 +109,7 @@ class BrainCodec(EEGCodec):
         optimizer_d, optimizer_g = self.optimizers()
         scheduler_d, scheduler_g = self.lr_schedulers()
 
-        audio_hat, commit_loss = self._common_step(x)
+        audio_hat, commit_loss, *_ = self._common_step(x)
 
         x = rearrange(
             x,
@@ -176,7 +183,7 @@ class BrainCodec(EEGCodec):
     def validation_step(self, batch, batch_idx):
         x = batch.data
 
-        audio_hat, commit_loss = self._common_step(x)
+        audio_hat, commit_loss, *_ = self._common_step(x)
 
         x = rearrange(
             x,
@@ -212,7 +219,7 @@ class BrainCodec(EEGCodec):
     def test_step(self, batch, batch_idx):
         x = batch.data
 
-        audio_hat, commit_loss = self._common_step(x)
+        audio_hat, commit_loss, *_ = self._common_step(x)
 
         x = rearrange(
             x,
@@ -244,6 +251,13 @@ class BrainCodec(EEGCodec):
         self.log("test/prd", self.test_prd)
 
         return
+
+    def predict_step(self, batch: EEGBatch, batch_idx):
+        x = batch.data
+
+        codes = self._common_step(x)[-1]
+
+        return codes, batch.emotion
 
     @staticmethod
     def _compute_prd(x: torch.Tensor, y: torch.Tensor):

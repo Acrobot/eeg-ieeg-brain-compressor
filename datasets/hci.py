@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 from torch.utils.data import DataLoader, Dataset
 from torcheeg import transforms
@@ -22,6 +23,8 @@ class HciEegDataset(EEGDataset):
         train_size: float = 0.75,
         validation_size: float = 0.15,
         seed: int = 42,
+        io_path: str | None = None,
+        predict_dataset: Literal["train", "val", "test"] = "test",
     ) -> None:
         super().__init__()
         self.folder = folder
@@ -31,6 +34,7 @@ class HciEegDataset(EEGDataset):
         self.num_workers = num_workers
         self.limit_train_batches = limit_train_batches
         self.segment_samples = int(self.segment_size / 1000.0 * _SAMPLING_RATE)
+        self.predict_dataset = predict_dataset
 
         test_size = 1 - train_size - validation_size
         self.dataset = MAHNOBDataset(
@@ -38,6 +42,7 @@ class HciEegDataset(EEGDataset):
             chunk_size=self.segment_samples,
             sampling_rate=_SAMPLING_RATE,
             online_transform=transforms.Compose([transforms.ToTensor()]),
+            io_path=io_path,
         )
         self.dataset_train, test = train_test_split(
             dataset=self.dataset, test_size=1 - train_size, random_state=seed
@@ -73,7 +78,14 @@ class HciEegDataset(EEGDataset):
         )
 
     def predict_dataloader(self) -> DataLoader:
-        return self.test_dataloader()
+        if self.predict_dataset == "train":
+            return self.train_dataloader()
+        elif self.predict_dataset == "val":
+            return self.val_dataloader()
+        elif self.predict_dataset == "test":
+            return self.test_dataloader()
+        else:
+            raise NotImplementedError
 
 
 class MahnobHciWrapper(Dataset[EEGBatch]):
@@ -84,8 +96,14 @@ class MahnobHciWrapper(Dataset[EEGBatch]):
         signal, labels = self.dataset[index]
         sample_id = int(labels["clip_id"].split("_")[-1])
         patient = labels["subject_id"]
+        emotion = labels["feltEmo"]
         return EEGBatch(
-            data=signal, id=index, sample_id=sample_id, patient=patient, dataset=0
+            data=signal,
+            id=index,
+            sample_id=sample_id,
+            patient=patient,
+            dataset=0,
+            emotion=emotion,
         )
 
     def __len__(self) -> int:

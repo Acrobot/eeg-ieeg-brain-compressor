@@ -5,21 +5,25 @@ trainer:
   devices: auto
   num_nodes: 1
   precision: 32
-  logger:
-    class_path: pytorch_lightning.loggers.WandbLogger
-    init_args:
-      project: "BrainCodec"
-      name: "Initial run 2"
+#  logger:
+#    class_path: pytorch_lightning.loggers.WandbLogger
+#    init_args:
+#      project: "BrainCodec"
+#      name: "Initial run 2"
   callbacks:
-    class_path: pytorch_lightning.callbacks.ModelCheckpoint
-    init_args:
-      dirpath: "D:\\Programming\\eeg-ieeg-brain-compressor\\checkpoints"
-      save_last: true
-      save_top_k: 10
-      monitor: "train/prd"
-      mode: min
-      filename: "epoch={epoch}-step={step}-prd={train/prd:.2f}"
-      auto_insert_metric_name: false
+    - class_path: pytorch_lightning.callbacks.ModelCheckpoint
+      init_args:
+        dirpath: "D:\\Programming\\eeg-ieeg-brain-compressor\\checkpoints"
+        save_last: true
+        save_top_k: 10
+        monitor: "train/prd"
+        mode: min
+        filename: "epoch={epoch}-step={step}-prd={train/prd:.2f}"
+        auto_insert_metric_name: false
+    - class_path: utils.prediction_writer.EpochWriter
+      init_args:
+        output_dir: "D:\\Programming\\eeg-ieeg-brain-compressor\\predictions"
+
   check_val_every_n_epoch: 1
   log_every_n_steps: 10
   enable_checkpointing: true
@@ -88,6 +92,7 @@ data:
   class_path: datasets.hci.HciEegDataset
   init_args:
     folder: "D:\\Programming\\hci-data\\Sessions"
+    io_path: "D:\\Programming\\eeg-ieeg-brain-compressor\\.torcheeg\\datasets_1741986409972_NbrnT"
     batch_size: 16
     segment_size: 4000
     stride: 1000
@@ -95,6 +100,7 @@ data:
     train_size: 0.75
     validation_size: 0.15
     seed: 42
+    # predict_dataset: "train"
 
 #  class_path: datasets.bids.BIDSEEGData
 #  init_args:
